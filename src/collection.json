@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/@angular-devkit/schematics/collection-schema.json",
+  "schematics": {
+    "schematics-pwa": {
+      "description": "A CAP Angular PWA WebPush Schematic",
+      "factory": "./schematics-webpush/index#schematicsPWAWebPush",
+      "schema": "./schematics-webpush/schema.json"
+    },
+    "ng-add": {
+      "description": "Add schematic",
+      "factory": "./ng-add/index",
+      "schema": "./schematics-webpush/schema.json"
+    }
+  }
+}
