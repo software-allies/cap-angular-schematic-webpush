@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "id": "CAP Angular Schematics PWA",
-  "title": "CAP Angular Schematics PWA",
+  "id": "CAP Angular Schematic WebPush",
+  "title": "CAP Angular Schematic WebPush",
   "type": "object",
   "properties": {
     "project": {
@@ -17,6 +17,7 @@
       "type": "string",
       "description": "Domain and Port",
       "x-prompt": "What is the API domain and port for connect the web push socket?",
+      "default": "http://localhost:4000",
       "$default": {
         "$source": "argv",
         "index": 1

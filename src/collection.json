@@ -3,13 +3,13 @@
   "schematics": {
     "schematics-pwa": {
       "description": "A CAP Angular PWA WebPush Schematic",
-      "factory": "./schematics-webpush/index#schematicsPWAWebPush",
-      "schema": "./schematics-webpush/schema.json"
+      "factory": "./cap-angular-schematic-webpush/index#schematicsPWAWebPush",
+      "schema": "./cap-angular-schematic-webpush/schema.json"
     },
     "ng-add": {
       "description": "Add schematic",
       "factory": "./ng-add/index",
-      "schema": "./schematics-webpush/schema.json"
+      "schema": "./cap-angular-schematic-webpush/schema.json"
     }
   }
 }

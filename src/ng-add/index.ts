@@ -3,7 +3,7 @@ import { chain, Rule, schematic, SchematicContext, Tree, } from '@angular-devkit
 export default function (options: any): Rule {
   return (host: Tree, context: SchematicContext) => {
     return chain([
-      schematic('schematics-webpush', options)
+      schematic('cap-angular-schematic-webpush', options)
     ])(host, context);
   };
 }
