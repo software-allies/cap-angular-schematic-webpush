@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@angular-devkit/schematics/collection-schema.json",
   "schematics": {
-    "schematics-pwa": {
+    "cap-angular-schematic-webpush": {
       "description": "A CAP Angular PWA WebPush Schematic",
       "factory": "./cap-angular-schematic-webpush/index#schematicsPWAWebPush",
       "schema": "./cap-angular-schematic-webpush/schema.json"
