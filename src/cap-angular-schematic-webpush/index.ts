@@ -32,7 +32,8 @@ import {
   readIntoSourceFile
 } from './cap-utils';
 import {
-  addProviderToModule
+  addProviderToModule,
+  addImportToModule
  } from './vendored-ast-utils';
 import { Schema as PWAOptions } from './schema';
 
@@ -167,6 +168,28 @@ function addDeclarationToNgModule(options: PWAOptions): Rule {
         }
     }
     host.commitUpdate(providerRecorder);
+
+    // Import and include on Imports the HttpClient
+    () => {
+
+        const source = readIntoSourceFile(host, modulePath);
+        const relativePath = `@angular/common/http`;
+        const classifiedName = strings.classify(`HttpClient`);
+        const importRecorder = host.beginUpdate(modulePath);
+        const importChanges: any = addImportToModule(
+            source,
+            modulePath,
+            classifiedName,
+            relativePath);
+
+        for (const change of importChanges) {
+            if (change instanceof InsertChange) {
+                importRecorder.insertLeft(change.pos, change.toAdd);
+            }
+        }
+        host.commitUpdate(importRecorder);
+    }
+
     return host;
   };
 }
