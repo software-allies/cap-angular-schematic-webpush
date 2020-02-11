@@ -174,7 +174,7 @@ function addDeclarationToNgModule(options: PWAOptions): Rule {
 
         const source = readIntoSourceFile(host, modulePath);
         const relativePath = `@angular/common/http`;
-        const classifiedName = strings.classify(`HttpClient`);
+        const classifiedName = strings.classify(`HttpClientModule`);
         const importRecorder = host.beginUpdate(modulePath);
         const importChanges: any = addImportToModule(
             source,
