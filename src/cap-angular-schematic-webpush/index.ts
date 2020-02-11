@@ -96,6 +96,7 @@ import { SwPush } from "@angular/service-worker";
 })
 export class AppComponent {
 
+    title = '${options.project}';
     sub: any;
 
     readonly VAPID_PUBLIC_KEY = "BLnVk1MBGFBW4UxL44fuoM2xxQ4o9CuxocVzKn9UVmnXZEyPCTEFjI4sALMB8qN5ee67yZ6MeQWjd5iyS8lINAg";
