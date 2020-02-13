@@ -22,7 +22,29 @@
         "$source": "argv",
         "index": 1
       }
+    },
+    "vapidPublicKey": {
+      "type": "string",
+      "description": "Vapid PublicKey",
+      "x-prompt": "What is the Vapid PublicKey?",
+      "default": "BLnVk1MBGFBW4UxL44fuoM2xxQ4o9CuxocVzKn9UVmnXZEyPCTEFjI4sALMB8qN5ee67yZ6MeQWjd5iyS8lINAg",
+      "$default": {
+        "$source": "argv",
+        "index": 2
+      }
+    },
+    "vapidPrivateKey": {
+      "type": "string",
+      "description": "Vapid PrivateKey",
+      "x-prompt": "What is the Vapid PrivateKey?",
+      "default": "mp5xYHWtRTyCA63nZMvmJ_qmYO6A1klSotcoppSx-MI",
+      "$default": {
+        "$source": "argv",
+        "index": 3
+      }
     }
+
+    
   },
-  "required": ["project", "domain"]
+  "required": ["project", "domain", "vapidPublicKey", "vapidPrivateKey"]
 }

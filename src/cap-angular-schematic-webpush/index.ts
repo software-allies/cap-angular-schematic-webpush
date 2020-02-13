@@ -10,9 +10,10 @@ import {
   Rule,
   SchematicsException,
   Tree,
-  // noop,
-  // externalSchematic
+  SchematicContext
  } from '@angular-devkit/schematics';
+ import { FileSystemSchematicContext } from '@angular-devkit/schematics/tools';
+ import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
  import {
   buildRelativePath, 
   findModule, 
@@ -20,11 +21,8 @@ import {
   ROUTING_MODULE_EXT
 } from '@schematics/angular/utility/find-module';
 import { getWorkspace } from '@schematics/angular/utility/config';
-import { FileSystemSchematicContext } from '@angular-devkit/schematics/tools';
 import { getProjectFromWorkspace } from '@angular/cdk/schematics/utils/get-project';
 import { 
-  // fileExist,
-  // hasUniversalBuild,
   addDependencyToPackageJson,
   getSourceRoot,
   appendHtmlElementToTag,
@@ -100,7 +98,7 @@ export class AppComponent {
     title = '${options.project}';
     sub: any;
 
-    readonly VAPID_PUBLIC_KEY = "BLnVk1MBGFBW4UxL44fuoM2xxQ4o9CuxocVzKn9UVmnXZEyPCTEFjI4sALMB8qN5ee67yZ6MeQWjd5iyS8lINAg";
+    readonly VAPID_PUBLIC_KEY = "${options.vapidPublicKey}";
 
     constructor(
         private swUpdate: SwUpdate,
@@ -203,12 +201,12 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
 
     // On AppComponent html
     const addToAppComponentHtml = 
-    `
+`
 <div>
     <button class="button button-primary" (click)="subscribeToNotifications()" [disabled]="sub">Subscribe</button>
     <button class="button button-danger" (click)="sendNewsletter()">Send</button>
 </div>
-    `;
+`;
 
     const appComponentHtmlPath = getSourceRoot(tree, options) + '/app/app.component.html';
     /** Appends the given element HTML fragment to the specified HTML file. Before o after */
@@ -216,12 +214,38 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
   }
 }
 
-function applyWebPushOnServer(): Rule {
+function applyWebPushOnServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
       // Add to configuration and api routes on server.js
       const addToServer = 
       `
+
+
+/*
+## How To show the Allow Notifications Dialog
+If by accident we click "Deny" in the Allow Notifications dialog after hitting subscribe,
+In order to trigger again the Allow Notifications popup, we need first to clear localhost from this list - [chrome://settings/content/notifications](chrome://settings/content/notifications)
+
+## Generating VAPID keys
+In order to generate a public/private VAPID key pair, we first need to install the [web-push](https://github.com/web-push-libs/web-push) library globally:
+
+    npm install web-push -g
+
+We can then generate a VAPID key pair with this command:
+
+    web-push generate-vapid-keys --json
+
+And here is a sample output of this command:
+
+json
+{
+    "publicKey": "BF1BhDhSW89yKw6pWbLlzcDpCR3I3ViSCEiS_z0q_RP9-ablo5Up8HDIEP1-GauARtU7MxB6Yl_7FI8UvczPmaQ",
+    "privateKey": "6XaIXj1cbSoaCpxSbOA-xYWHSISVSMCPUcSvEcczxkg"
+}
+
+*/
+
 
 const webpush = require('web-push');
 
@@ -267,8 +291,8 @@ export function sendNewsletter(req, res) {
 }
 
 const vapidKeys = {
-    "publicKey":"BLnVk1MBGFBW4UxL44fuoM2xxQ4o9CuxocVzKn9UVmnXZEyPCTEFjI4sALMB8qN5ee67yZ6MeQWjd5iyS8lINAg",
-    "privateKey":"mp5xYHWtRTyCA63nZMvmJ_qmYO6A1klSotcoppSx-MI"
+    "publicKey":"${options.vapidPublicKey}",
+    "privateKey":"${options.vapidPrivateKey}"
 };
 
 webpush.setVapidDetails(
@@ -289,15 +313,29 @@ app.route('/api/newsletter')
         const appComponentPath = '/server.ts' || '/server.js';
         const appComponent = getFileContent(tree, appComponentPath);
         createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`const app = express();`, `const app = express();` + addToServer));
-
-        // add web-push dependency to package.json
-        addDependencyToPackageJson(tree, {
-            type: NodeDependencyType.Default,
-            name: 'web-push',
-            version: '^3.2.5'
-        });
-
     }
+}
+
+function addPackageJsonDependencies(): Rule {
+  return (host: Tree) => {
+
+    // add web-push dependency to package.json
+    addDependencyToPackageJson(host, {
+        type: NodeDependencyType.Default,
+        name: 'web-push',
+        version: '^3.2.5'
+    });
+
+    return host;
+  };
+}
+
+function installPackageJsonDependencies(): Rule {
+  return (host: Tree, context: SchematicContext) => {
+    context.addTask(new NodePackageInstallTask());
+    context.logger.log('info', `🔍 Installing packages...`);
+    return host;
+  };
 }
 
 function applyPackageJsonScripts(options: PWAOptions) {
@@ -308,10 +346,7 @@ function applyPackageJsonScripts(options: PWAOptions) {
 			throw new SchematicsException('Could not find package.json');
 		}
 		const pkg = JSON.parse(buffer.toString());
-        pkg.scripts['start-pwa'] = `npm run build:app-shell && npm run serve:ssr`;
-        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell `;
-        pkg.scripts['build:app-shell'] = `npm run build:client-and-server-bundles:app-shell && npm run webpack:server`;
-        pkg.scripts['build:client-and-server-bundles:app-shell'] = `ng build --prod --build-optimizer && npm run fix-memory-limit && ng run ${options.project}:app-shell:production`;
+        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production && npm run compiler:ssr && npm run serve:ssr`;
 		tree.overwrite(pkgPath, JSON.stringify(pkg, null, 2));
 		return tree;
 	}
@@ -339,9 +374,11 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     return chain([
       branchAndMerge(chain([
         applyPackageJsonScripts(options),
-        applyWebPushOnServer(),
+        addPackageJsonDependencies(),
+        applyWebPushOnServer(options),
         applyWebPushOnFront(options),
-        addDeclarationToNgModule(options)
+        addDeclarationToNgModule(options),
+        installPackageJsonDependencies()
       ])),
     ])(host, context);
   };
