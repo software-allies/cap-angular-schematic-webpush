@@ -312,7 +312,7 @@ app.route('/api/newsletter')
 
         const appComponentPath = '/server.ts' || '/server.js';
         const appComponent = getFileContent(tree, appComponentPath);
-        createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`const app = express();`, `const app = express();` + addToServer));
+        createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`express();`, `express();` + addToServer));
     }
 }
 

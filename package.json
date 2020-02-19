@@ -1,6 +1,6 @@
 {
   "name": "cap-angular-schematic-webpush",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "CAP Schematics PWA WebPush",
   "scripts": {
     "build": "tsc -p tsconfig.json",
