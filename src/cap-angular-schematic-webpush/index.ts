@@ -271,7 +271,7 @@ json
 
 */
 
-## Web-Push Block
+// Web-Push Block
 const webpush = require('web-push');
 ${(options.haveBodyParser) ? '' : bodyParser}
 
@@ -327,7 +327,7 @@ export function sendPushNotifications(req, res) {
         });
 }
 
-## Web-Push REST API
+// Web-Push REST API
 app.route('/api/add-push-subscriber')
     .post(addPushSubscriber);
 
