@@ -378,7 +378,7 @@ function applyPackageJsonScripts(options: PWAOptions) {
 			throw new SchematicsException('Could not find package.json');
 		}
 		const pkg = JSON.parse(buffer.toString());
-        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production && npm run compile:server && npm run serve:ssr`;
+        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production && npm run compile:server`;
 		tree.overwrite(pkgPath, JSON.stringify(pkg, null, 2));
 		return tree;
 	}
