@@ -43,10 +43,12 @@ function createPushService(tree: Tree, options: PWAOptions) {
   `
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
+import { map, catchError, tap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
 
 
 @Injectable({
-    "providedIn": "root"
+    providedIn: 'root'
 })
 export class PushService {
     private actionUrl: string;
@@ -54,21 +56,32 @@ export class PushService {
 
     constructor(private http: HttpClient) {
         this.httpOptions = {
-            headers: new HttpHeaders({ 
+            headers: new HttpHeaders({
                 'Content-Type': 'application/json'
-            }),
-            observe: "response"
+            })
         };
 
         this.actionUrl = '${options.domain}';
     }
 
-    addPushSubscriber(sub:any) {
-        return this.http.post('${options.domain}/api/notifications', sub);
+    addPushSubscriber(sub: any): Observable<any> {
+        return this.http.post<HttpResponse<any>>(this.actionUrl + '/api/add-push-subscriber', JSON.stringify(sub), this.httpOptions)
+        .pipe(
+            map(response => response),
+            tap((response: HttpResponse<any>) => {
+                return response;
+            }),
+            catchError(error => this.handleError(error))
+        );
     }
 
     send() {
-        return this.http.post('${options.domain}/api/newsletter', null);
+        return this.http.post(this.actionUrl + '/api/send-push-notifications', null, this.httpOptions);
+    }
+
+    private handleError(error: any) {
+        console.log(error);
+        return throwError(error || 'Server error');
     }
 }
 
@@ -217,10 +230,22 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
 function applyWebPushOnServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
-      // Add to configuration and api routes on server.js
-      const addToServer = 
-      `
+        const bodyParser = `
+const bodyParser = require('body-parser');
+app.use(bodyParser.json());
+`;
 
+        const appComponentPath = '/server.ts' || '/server.js';
+        const appComponent = getFileContent(tree, appComponentPath);
+
+
+        // Search if is isung body-parser
+        options.haveBodyParser = (appComponent.indexOf(`bodyParser.json()`) > -1) ? true : false;
+
+
+        // Add to configuration and api routes on server.js
+        const addToServer = 
+      `
 
 /*
 ## How To show the Allow Notifications Dialog
@@ -246,8 +271,20 @@ json
 
 */
 
-
+## Web-Push Block
 const webpush = require('web-push');
+${(options.haveBodyParser) ? '' : bodyParser}
+
+const vapidKeys = {
+    "publicKey":"${options.vapidPublicKey}",
+    "privateKey":"${options.vapidPrivateKey}"
+};
+
+webpush.setVapidDetails(
+    'mailto:example@yourdomain.org',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);
 
 export let USER_SUBSCRIPTIONS = [];
 
@@ -259,7 +296,7 @@ export function addPushSubscriber(req, res) {
         .json({ message: "Subscription added successfully." });
 }
 
-export function sendNewsletter(req, res) {
+export function sendPushNotifications(req, res) {
 
     console.log('Total subscriptions', USER_SUBSCRIPTIONS.length);
 
@@ -290,33 +327,19 @@ export function sendNewsletter(req, res) {
         });
 }
 
-const vapidKeys = {
-    "publicKey":"${options.vapidPublicKey}",
-    "privateKey":"${options.vapidPrivateKey}"
-};
-
-webpush.setVapidDetails(
-    'mailto:example@yourdomain.org',
-    vapidKeys.publicKey,
-    vapidKeys.privateKey
-);
-
-// REST API
-app.route('/api/notifications')
+## Web-Push REST API
+app.route('/api/add-push-subscriber')
     .post(addPushSubscriber);
 
-app.route('/api/newsletter')
-    .post(sendNewsletter);
+app.route('/api/send-push-notifications')
+    .post(sendPushNotifications);
+`;
 
-      `;
-
-        const appComponentPath = '/server.ts' || '/server.js';
-        const appComponent = getFileContent(tree, appComponentPath);
         createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`const app = express();`, `const app = express();` + addToServer));
     }
 }
 
-function addPackageJsonDependencies(): Rule {
+function addPackageJsonDependencies(options: PWAOptions): Rule {
   return (host: Tree) => {
 
     // add web-push dependency to package.json
@@ -325,6 +348,15 @@ function addPackageJsonDependencies(): Rule {
         name: 'web-push',
         version: '^3.2.5'
     });
+
+    if (!options.haveBodyParser) {
+        // add body-parser dependency to package.json
+        addDependencyToPackageJson(host, {
+            type: NodeDependencyType.Dev,
+            name: 'body-parser',
+            version: '^1.19.0'
+        });
+    }
 
     return host;
   };
@@ -346,7 +378,7 @@ function applyPackageJsonScripts(options: PWAOptions) {
 			throw new SchematicsException('Could not find package.json');
 		}
 		const pkg = JSON.parse(buffer.toString());
-        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production && npm run compiler:ssr && npm run serve:ssr`;
+        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production && npm run compile:server && npm run serve:ssr`;
 		tree.overwrite(pkgPath, JSON.stringify(pkg, null, 2));
 		return tree;
 	}
@@ -373,9 +405,9 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
 
     return chain([
       branchAndMerge(chain([
-        applyPackageJsonScripts(options),
-        addPackageJsonDependencies(),
         applyWebPushOnServer(options),
+        applyPackageJsonScripts(options),
+        addPackageJsonDependencies(options),
         applyWebPushOnFront(options),
         addDeclarationToNgModule(options),
         installPackageJsonDependencies()

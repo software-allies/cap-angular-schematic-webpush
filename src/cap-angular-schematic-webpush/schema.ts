@@ -7,4 +7,5 @@ export interface Schema {
     name?: string;
     path?: string;
     module?: any;
+    haveBodyParser?: boolean;
 }
