@@ -232,31 +232,18 @@ function createExpressServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
         const expressServer = `
-const enableProdMode = require('@angular/core').enableProdMode;
-const bodyParser = require('body-parser');
 const express = require('express');
 const join = require('path').join;
-const PORT = process.port || 4000;
+const PORT = process.port || ${(options.domain.split(':')[1])};
 const DIST_FOLDER = 'dist';
-
-// Faster server renders w/ Prod mode (dev mode never needed)
-enableProdMode();
 
 // Express server
 const app = express();
-app.use(bodyParser.json());
-
-// Server static files from /browser (Old)
-app.get('*.*', express.static(join(DIST_FOLDER, '${options.project}')));
-
-app.set('view engine', 'html');
-app.set('views', join(DIST_FOLDER, '${options.project}'));
 
 // Start up the Node server
 app.listen(PORT, () => {
-    console.log('Node server listening on port: 4000');
+    console.log('Node server listening on port: ' + PORT);
 });
-
         `;
 
         createOrOverwriteFile(tree, 'server.js', expressServer);
