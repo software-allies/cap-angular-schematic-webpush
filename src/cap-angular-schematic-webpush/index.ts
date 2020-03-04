@@ -10,7 +10,8 @@ import {
   Rule,
   SchematicsException,
   Tree,
-  SchematicContext
+  SchematicContext,
+  noop
  } from '@angular-devkit/schematics';
  import { FileSystemSchematicContext } from '@angular-devkit/schematics/tools';
  import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
@@ -227,6 +228,41 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
   }
 }
 
+function createExpressServer(options: PWAOptions): Rule {
+    return (tree: Tree) => {
+
+        const expressServer = `
+const enableProdMode = require('@angular/core').enableProdMode;
+const bodyParser = require('body-parser');
+const express = require('express');
+const join = require('path').join;
+const PORT = process.port || 4000;
+const DIST_FOLDER = 'dist';
+
+// Faster server renders w/ Prod mode (dev mode never needed)
+enableProdMode();
+
+// Express server
+const app = express();
+app.use(bodyParser.json());
+
+// Server static files from /browser (Old)
+app.get('*.*', express.static(join(DIST_FOLDER, '${options.project}')));
+
+app.set('view engine', 'html');
+app.set('views', join(DIST_FOLDER, '${options.project}'));
+
+// Start up the Node server
+app.listen(PORT, () => {
+    console.log('Node server listening on port: 4000');
+});
+
+        `;
+
+        createOrOverwriteFile(tree, 'server.js', expressServer);
+    }
+}
+
 function applyWebPushOnServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
@@ -235,13 +271,11 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 `;
 
-        const appComponentPath = '/server.ts' || '/server.js';
+        const appComponentPath = '/server.js' || '/server.ts';
         const appComponent = getFileContent(tree, appComponentPath);
 
-
-        // Search if is isung body-parser
+        // Search if is using body-parser
         options.haveBodyParser = (appComponent.indexOf(`bodyParser.json()`) > -1) ? true : false;
-
 
         // Add to configuration and api routes on server.js
         const addToServer = 
@@ -335,7 +369,7 @@ app.route('/api/send-push-notifications')
     .post(sendPushNotifications);
 `;
 
-        createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`const app = express();`, `const app = express();` + addToServer));
+        createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
     }
 }
 
@@ -403,8 +437,16 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     options.name = parsedPath.name;
     options.path = parsedPath.path;
 
+    // Search server
+    let haveServer = true;	
+    const buffer = host.read(`/server.js` || `/server.ts`);
+    if (buffer === null) {
+        haveServer = false;
+    }
+
     return chain([
       branchAndMerge(chain([
+        (!haveServer) ? createExpressServer(options) : noop(),
         applyWebPushOnServer(options),
         applyPackageJsonScripts(options),
         addPackageJsonDependencies(options),
