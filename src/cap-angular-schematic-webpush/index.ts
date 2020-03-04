@@ -235,7 +235,6 @@ function createExpressServer(options: PWAOptions): Rule {
 const express = require('express');
 const join = require('path').join;
 const PORT = process.port || ${(options.domain.split(':')[1])};
-const DIST_FOLDER = 'dist';
 
 // Express server
 const app = express();
@@ -246,7 +245,7 @@ app.listen(PORT, () => {
 });
         `;
 
-        createOrOverwriteFile(tree, 'server.js', expressServer);
+        createOrOverwriteFile(tree, 'server.ts', expressServer);
     }
 }
 
@@ -258,7 +257,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 `;
 
-        const appComponentPath = '/server.js' || '/server.ts';
+        const appComponentPath = '/server.ts' || '/server.js';
         const appComponent = getFileContent(tree, appComponentPath);
 
         // Search if is using body-parser
@@ -426,7 +425,7 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
 
     // Search server
     let haveServer = true;	
-    const buffer = host.read(`/server.js` || `/server.ts`);
+    const buffer = host.read(`/server.ts` || `/server.js`);
     if (buffer === null) {
         haveServer = false;
     }
