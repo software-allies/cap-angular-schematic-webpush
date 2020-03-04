@@ -8,4 +8,5 @@ export interface Schema {
     path?: string;
     module?: any;
     haveBodyParser?: boolean;
+    serverPath?: string;
 }

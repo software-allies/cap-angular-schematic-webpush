@@ -245,7 +245,7 @@ app.listen(PORT, () => {
 });
         `;
 
-        createOrOverwriteFile(tree, 'server.ts', expressServer);
+        createOrOverwriteFile(tree, 'server.js', expressServer);
     }
 }
 
@@ -257,8 +257,8 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 `;
 
-        const appComponentPath = '/server.ts' || '/server.js';
-        const appComponent = getFileContent(tree, appComponentPath);
+        const filePath = options.serverPath || '/server.js';
+        const appComponent = getFileContent(tree, filePath);
 
         // Search if is using body-parser
         options.haveBodyParser = (appComponent.indexOf(`bodyParser.json()`) > -1) ? true : false;
@@ -353,9 +353,18 @@ app.route('/api/add-push-subscriber')
 
 app.route('/api/send-push-notifications')
     .post(sendPushNotifications);
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept'
+    );
+    return next();
+});
 `;
 
-        createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
+        createOrOverwriteFile(tree, filePath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
     }
 }
 
@@ -398,7 +407,7 @@ function applyPackageJsonScripts(options: PWAOptions) {
 			throw new SchematicsException('Could not find package.json');
 		}
 		const pkg = JSON.parse(buffer.toString());
-        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production && npm run compile:server`;
+        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production`;
 		tree.overwrite(pkgPath, JSON.stringify(pkg, null, 2));
 		return tree;
 	}
@@ -424,10 +433,16 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     options.path = parsedPath.path;
 
     // Search server
-    let haveServer = true;	
-    const buffer = host.read(`/server.ts` || `/server.js`);
-    if (buffer === null) {
-        haveServer = false;
+    let haveServer = false;	
+    const bufferServerTs = host.read(`/server.ts`);
+    const bufferServerJs = host.read(`/server.js`);
+    if (bufferServerTs !== null) {
+        haveServer = true;
+        options.serverPath = '/server.ts';
+    }
+    if (bufferServerJs !== null) {
+        haveServer = true;
+        options.serverPath = '/server.js';
     }
 
     return chain([
@@ -443,3 +458,5 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     ])(host, context);
   };
 }
+
+
