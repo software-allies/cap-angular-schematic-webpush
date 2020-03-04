@@ -234,7 +234,7 @@ function createExpressServer(options: PWAOptions): Rule {
         const expressServer = `
 const express = require('express');
 const join = require('path').join;
-const PORT = process.port || ${(options.domain.split(':')[2])};
+const PORT = ${options.domain.split(':')[2] || 4000};
 
 // Express server
 const app = express();
