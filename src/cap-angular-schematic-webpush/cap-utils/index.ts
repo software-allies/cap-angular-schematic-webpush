@@ -199,7 +199,7 @@ export function readIntoSourceFile(host: Tree, modulePath: string) {
 }
 
 export function addEnvironmentVar(host: Tree, env: string, optionsPath: string, key: string, value: string): void {
-  const environmentFilePath = `${optionsPath}/environments/environment${(env) ? '-' + env : ''}.ts`;
+  const environmentFilePath = `${optionsPath}/environments/environment${(env) ? '.' + env : ''}.ts`;
   const sourceFile = getFileContent(host, environmentFilePath);
   const keyValue = `
   ${key}: '${value}',
