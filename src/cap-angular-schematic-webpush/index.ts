@@ -35,6 +35,7 @@ import {
   addImportToModule
  } from './vendored-ast-utils';
 import { Schema as PWAOptions } from './schema';
+import { getAppName } from './cap-utils/package';
 
 
 
@@ -239,6 +240,14 @@ const PORT = ${options.domain.split(':')[2] || 4000};
 // Express server
 const app = express();
 
+// Serve static files....
+app.use(express.static(__dirname + '/dist/${options.project}'));
+
+// Send all requests to index.html
+app.get('/*', function(req, res) {
+  res.sendFile(path.join(__dirname + '/dist/${options.project}/index.html'));
+});
+
 // Start up the Node server
 app.listen(PORT, () => {
     console.log('Node server listening on port: ' + PORT);
@@ -296,8 +305,8 @@ const webpush = require('web-push');
 ${(options.haveBodyParser) ? '' : bodyParser}
 
 const vapidKeys = {
-    "publicKey":"${options.vapidPublicKey}",
-    "privateKey":"${options.vapidPrivateKey}"
+    "publicKey": process.env['publicKey'] || "${options.vapidPublicKey}",
+    "privateKey": process.env['privateKey'] || "${options.vapidPrivateKey}"
 };
 
 webpush.setVapidDetails(
@@ -306,9 +315,9 @@ webpush.setVapidDetails(
     vapidKeys.privateKey
 );
 
-export let USER_SUBSCRIPTIONS = [];
+let USER_SUBSCRIPTIONS = [];
 
-export function addPushSubscriber(req, res) {
+function addPushSubscriber(req, res) {
     const sub = req.body;
     console.log('Received Subscription on the server: ', sub);
     USER_SUBSCRIPTIONS.push(sub);
@@ -316,7 +325,7 @@ export function addPushSubscriber(req, res) {
         .json({ message: "Subscription added successfully." });
 }
 
-export function sendPushNotifications(req, res) {
+function sendPushNotifications(req, res) {
 
     console.log('Total subscriptions', USER_SUBSCRIPTIONS.length);
 
@@ -362,6 +371,7 @@ app.use((req, res, next) => {
     );
     return next();
 });
+
 `;
 
         createOrOverwriteFile(tree, filePath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
@@ -420,7 +430,12 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     if (!project) {
       throw new SchematicsException(`Project is not defined in this workspace.`);
     }
-    options.clientProject = options.project;
+
+    // Get project
+    options.project = getAppName(host);
+    if (!options.project) {
+      throw new SchematicsException('Option "project" is required.');
+    }
 
     if (options.path === undefined) {
       options.path = buildDefaultPath(project);

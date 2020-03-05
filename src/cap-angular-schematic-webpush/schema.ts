@@ -1,12 +1,11 @@
 export interface Schema {
-    project: string;
     domain: string;
     vapidPublicKey: string;
     vapidPrivateKey: string;
-    clientProject?: string;
-    name?: string;
-    path?: string;
-    module?: any;
     haveBodyParser?: boolean;
     serverPath?: string;
+    project?: string;
+    module?: any;
+    name?: string;
+    path?: string;
 }

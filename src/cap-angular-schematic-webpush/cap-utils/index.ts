@@ -161,7 +161,7 @@ export function fileExist(host: Tree, path: string): boolean {
 export function hasUniversalBuild(tree: Tree, options: any): boolean {
 		let hasUniversalBuild = false;
 		const workspace = getWorkspace(tree);
-		const architect = workspace.projects[options.clientProject].architect;
+		const architect = workspace.projects[options.project].architect;
 		if (architect) {
 			for (let builder in architect) {
 				if (architect[builder].builder === '@angular-devkit/build-angular:server') {
@@ -187,7 +187,7 @@ export function addDependencyToPackageJson(tree: Tree, dependency: NodeDependenc
 
 export function getSourceRoot(tree: Tree, options: any): string {
 	const workspace = getWorkspace(tree);
-	return `/${workspace.projects[options.clientProject].sourceRoot}`;
+	return `/${workspace.projects[options.project].sourceRoot}`;
 }
 
 export function readIntoSourceFile(host: Tree, modulePath: string) {
