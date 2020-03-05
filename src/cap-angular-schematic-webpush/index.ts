@@ -163,8 +163,8 @@ export class AppComponent {
 
 function addToEnvironments(options: PWAOptions): Rule {
     return (host: Tree) => {
-        addEnvironmentVar(host, '', 'vapidKeysPublicKey', options.vapidPublicKey);
-        addEnvironmentVar(host, 'prod', 'vapidKeysPublicKey', options.vapidPublicKey);
+        addEnvironmentVar(host, '', options.path || '/src', 'vapidKeysPublicKey', options.vapidPublicKey);
+        addEnvironmentVar(host, 'prod', options.path || '/src', 'vapidKeysPublicKey', options.vapidPublicKey);
     }
 }
 
@@ -441,7 +441,7 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     }
 
     // Get project
-    options.project = getAppName(host);
+    options.project = (options.project) ? options.project : getAppName(host);
     if (!options.project) {
       throw new SchematicsException('Option "project" is required.');
     }
