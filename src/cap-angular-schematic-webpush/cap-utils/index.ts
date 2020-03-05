@@ -197,3 +197,14 @@ export function readIntoSourceFile(host: Tree, modulePath: string) {
   }
   return ts.createSourceFile(modulePath, text.toString('utf-8'), ts.ScriptTarget.Latest, true);
 }
+
+export function addEnvironmentVar(host: Tree, env: string, key: string, value: string): void {
+  const environmentFilePath = `/environments/environment${(env) ? '-' + env : ''}.json`;
+  const sourceFile = getFileContent(host, environmentFilePath);
+
+  const keyValue = `
+  ${key}: '${value}',
+`;
+  
+  host.overwrite(environmentFilePath, sourceFile.replace('export const environment = {', `export const environment = {${keyValue}` ));
+}

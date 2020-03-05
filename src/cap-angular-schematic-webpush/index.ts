@@ -28,7 +28,8 @@ import {
   getSourceRoot,
   appendHtmlElementToTag,
   createOrOverwriteFile,
-  readIntoSourceFile
+  readIntoSourceFile,
+  addEnvironmentVar
 } from './cap-utils';
 import {
   addProviderToModule,
@@ -101,6 +102,7 @@ import { Component } from '@angular/core';
 import { SwUpdate } from "@angular/service-worker";
 import { PushService } from "./shared/services/push.service";
 import { SwPush } from "@angular/service-worker";
+import { environment } from './../environments/environment';
 
 
 @Component({
@@ -113,7 +115,7 @@ export class AppComponent {
     title = '${options.project}';
     sub: any;
 
-    readonly VAPID_PUBLIC_KEY = "${options.vapidPublicKey}";
+    readonly VAPID_PUBLIC_KEY = environment.vapidKeysPublicKey;
 
     constructor(
         private swUpdate: SwUpdate,
@@ -157,6 +159,13 @@ export class AppComponent {
 
     const appComponentPath = getSourceRoot(tree, options) + '/app/app.component.ts';
     createOrOverwriteFile(tree, appComponentPath, appComponentContent);
+}
+
+function addToEnvironments(options: PWAOptions): Rule {
+    return (host: Tree) => {
+        addEnvironmentVar(host, '', 'vapidKeysPublicKey', options.vapidPublicKey);
+        addEnvironmentVar(host, 'prod', 'vapidKeysPublicKey', options.vapidPublicKey);
+    }
 }
 
 function addDeclarationToNgModule(options: PWAOptions): Rule {
@@ -468,6 +477,7 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
         addPackageJsonDependencies(options),
         applyWebPushOnFront(options),
         addDeclarationToNgModule(options),
+        addToEnvironments(options),
         installPackageJsonDependencies()
       ])),
     ])(host, context);
