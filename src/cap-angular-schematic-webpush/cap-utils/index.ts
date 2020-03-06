@@ -198,11 +198,19 @@ export function readIntoSourceFile(host: Tree, modulePath: string) {
   return ts.createSourceFile(modulePath, text.toString('utf-8'), ts.ScriptTarget.Latest, true);
 }
 
-export function addEnvironmentVar(host: Tree, env: string, optionsPath: string, key: string, value: string): void {
-  const environmentFilePath = `${optionsPath}/environments/environment${(env) ? '.' + env : ''}.ts`;
+/**
+ * Appends a key: value on a specific environment file 
+ * @param host Tree
+ * @param env The environment to be added (example: prod, staging...)
+ * @param appPath application path (/src...)
+ * @param key The key to be added
+ * @param value The value to be added
+ * @return void
+*/
+export function addEnvironmentVar(host: Tree, env: string, appPath: string, key: string, value: string): void {
+  const environmentFilePath = `${appPath}/environments/environment${(env) ? '.' + env : ''}.ts`;
   const sourceFile = getFileContent(host, environmentFilePath);
   const keyValue = `
-  ${key}: '${value}',
-`;
+  ${key}: '${value}',`;
   host.overwrite(environmentFilePath, sourceFile.replace('export const environment = {', `export const environment = {${keyValue}` ));
 }

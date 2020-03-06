@@ -22,20 +22,53 @@ ng add cap-angular-schematic-webpush
 
 The schematic will be configurated after you answer the following questions.
 
-* What is the logo url for the header menu? : < logo-url >
-* Do you want to remove the content for app.component.html? : < Y/N >
-* Do you want to integrate with the cap-authentication module?: < Y/N >
-* Do you want to add cap-authentication Schematic? : < Y/N >
+* What is the API Url for Web Push End Points? : < http://domain:port >
+* What is the Vapid PublicKey? : < string >
+* What is the Vapid PrivateKey?: < string >
 ​
-The Schematic will create a component for each feature of actions along with the routing configuration.
+The Schematic will do the next:
+- Create a express server if not exist and ad the configuration and routes to use for add subscriptions and send notifictions to subscribers.
+- Create a Angular service to send the subcription to the server and register on providers on app.module.ts.
+- Add a example buttons to add the subscription event and for send notifications to subscribers.
+- Add to app.component.ts the logic for update the service worker, subscribe to web push notifications and for execute the events of the example buttons for subscribe and send notifications to subscribers.
+- Install web-push and if not exits a body-parser package.
+- Add to environments the Vapid Public Key for Web Push.
 
+
+Touched files:
 ```
 app
     |-- package.json
     |-- server.js
+    |-- app.component.ts
+    |-- app.module.ts
+    |-- environments/environment.ts
+    |-- environments/environment.prod.ts
 	|-- shared/
 	    |-- web-push.service.ts
 ```
+
+## How To show the Allow Notifications Dialog
+If by accident we click "Deny" in the Allow Notifications dialog after hitting subscribe,
+In order to trigger again the Allow Notifications popup, we need first to clear localhost from this list - [chrome://settings/content/notifications](chrome://settings/content/notifications)
+
+## Generating VAPID keys
+In order to generate a public/private VAPID key pair, we first need to install the [web-push](https://github.com/web-push-libs/web-push) library globally:
+
+    npm install web-push -g
+
+We can then generate a VAPID key pair with this command:
+
+    web-push generate-vapid-keys --json
+
+And here is a sample output of this command:
+
+json
+{
+    "publicKey": "BF1BhDhSW89yKw6pWbLlzcDpCR3I3ViSCEiS_z0q_RP9-ablo5Up8HDIEP1-GauARtU7MxB6Yl_7FI8UvczPmaQ",
+    "privateKey": "6XaIXj1cbSoaCpxSbOA-xYWHSISVSMCPUcSvEcczxkg"
+}
+
 
 ## Usage
 angular 8
