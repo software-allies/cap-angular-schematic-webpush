@@ -10,7 +10,8 @@ import {
   Rule,
   SchematicsException,
   Tree,
-  SchematicContext
+  SchematicContext,
+  noop
  } from '@angular-devkit/schematics';
  import { FileSystemSchematicContext } from '@angular-devkit/schematics/tools';
  import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
@@ -27,13 +28,15 @@ import {
   getSourceRoot,
   appendHtmlElementToTag,
   createOrOverwriteFile,
-  readIntoSourceFile
+  readIntoSourceFile,
+  addEnvironmentVar
 } from './cap-utils';
 import {
   addProviderToModule,
   addImportToModule
  } from './vendored-ast-utils';
 import { Schema as PWAOptions } from './schema';
+import { getAppName } from './cap-utils/package';
 
 
 
@@ -99,6 +102,7 @@ import { Component } from '@angular/core';
 import { SwUpdate } from "@angular/service-worker";
 import { PushService } from "./shared/services/push.service";
 import { SwPush } from "@angular/service-worker";
+import { environment } from './../environments/environment';
 
 
 @Component({
@@ -111,7 +115,7 @@ export class AppComponent {
     title = '${options.project}';
     sub: any;
 
-    readonly VAPID_PUBLIC_KEY = "${options.vapidPublicKey}";
+    readonly VAPID_PUBLIC_KEY = environment.vapidKeysPublicKey;
 
     constructor(
         private swUpdate: SwUpdate,
@@ -155,6 +159,13 @@ export class AppComponent {
 
     const appComponentPath = getSourceRoot(tree, options) + '/app/app.component.ts';
     createOrOverwriteFile(tree, appComponentPath, appComponentContent);
+}
+
+function addToEnvironments(options: PWAOptions): Rule {
+    return (host: Tree) => {
+        addEnvironmentVar(host, '', options.path || '/src', 'vapidKeysPublicKey', options.vapidPublicKey);
+        addEnvironmentVar(host, 'prod', options.path || '/src', 'vapidKeysPublicKey', options.vapidPublicKey);
+    }
 }
 
 function addDeclarationToNgModule(options: PWAOptions): Rule {
@@ -227,6 +238,35 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
   }
 }
 
+function createExpressServer(options: PWAOptions): Rule {
+    return (tree: Tree) => {
+
+        const expressServer = `
+const express = require('express');
+const join = require('path').join;
+const PORT = ${options.domain.split(':')[2] || 4000};
+
+// Express server
+const app = express();
+
+// Serve static files....
+app.use(express.static(__dirname + '/dist/${options.project}'));
+
+// Send all requests to index.html
+app.get('/*', function(req, res) {
+  res.sendFile(path.join(__dirname + '/dist/${options.project}/index.html'));
+});
+
+// Start up the Node server
+app.listen(PORT, () => {
+    console.log('Node server listening on port: ' + PORT);
+});
+        `;
+
+        createOrOverwriteFile(tree, 'server.js', expressServer);
+    }
+}
+
 function applyWebPushOnServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
@@ -235,13 +275,11 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 `;
 
-        const appComponentPath = '/server.ts' || '/server.js';
-        const appComponent = getFileContent(tree, appComponentPath);
+        const filePath = options.serverPath || '/server.js';
+        const appComponent = getFileContent(tree, filePath);
 
-
-        // Search if is isung body-parser
+        // Search if is using body-parser
         options.haveBodyParser = (appComponent.indexOf(`bodyParser.json()`) > -1) ? true : false;
-
 
         // Add to configuration and api routes on server.js
         const addToServer = 
@@ -271,13 +309,13 @@ json
 
 */
 
-## Web-Push Block
+// Web-Push Block
 const webpush = require('web-push');
 ${(options.haveBodyParser) ? '' : bodyParser}
 
 const vapidKeys = {
-    "publicKey":"${options.vapidPublicKey}",
-    "privateKey":"${options.vapidPrivateKey}"
+    "publicKey": process.env['publicKey'] || "${options.vapidPublicKey}",
+    "privateKey": process.env['privateKey'] || "${options.vapidPrivateKey}"
 };
 
 webpush.setVapidDetails(
@@ -286,9 +324,9 @@ webpush.setVapidDetails(
     vapidKeys.privateKey
 );
 
-export let USER_SUBSCRIPTIONS = [];
+let USER_SUBSCRIPTIONS = [];
 
-export function addPushSubscriber(req, res) {
+function addPushSubscriber(req, res) {
     const sub = req.body;
     console.log('Received Subscription on the server: ', sub);
     USER_SUBSCRIPTIONS.push(sub);
@@ -296,7 +334,7 @@ export function addPushSubscriber(req, res) {
         .json({ message: "Subscription added successfully." });
 }
 
-export function sendPushNotifications(req, res) {
+function sendPushNotifications(req, res) {
 
     console.log('Total subscriptions', USER_SUBSCRIPTIONS.length);
 
@@ -327,15 +365,25 @@ export function sendPushNotifications(req, res) {
         });
 }
 
-## Web-Push REST API
+// Web-Push REST API
 app.route('/api/add-push-subscriber')
     .post(addPushSubscriber);
 
 app.route('/api/send-push-notifications')
     .post(sendPushNotifications);
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept'
+    );
+    return next();
+});
+
 `;
 
-        createOrOverwriteFile(tree, appComponentPath, appComponent.replace(`const app = express();`, `const app = express();` + addToServer));
+        createOrOverwriteFile(tree, filePath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
     }
 }
 
@@ -378,7 +426,7 @@ function applyPackageJsonScripts(options: PWAOptions) {
 			throw new SchematicsException('Could not find package.json');
 		}
 		const pkg = JSON.parse(buffer.toString());
-        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production && npm run compile:server && npm run serve:ssr`;
+        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production`;
 		tree.overwrite(pkgPath, JSON.stringify(pkg, null, 2));
 		return tree;
 	}
@@ -391,7 +439,12 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     if (!project) {
       throw new SchematicsException(`Project is not defined in this workspace.`);
     }
-    options.clientProject = options.project;
+
+    // Get project
+    options.project = (options.project) ? options.project : getAppName(host);
+    if (!options.project) {
+      throw new SchematicsException('Option "project" is required.');
+    }
 
     if (options.path === undefined) {
       options.path = buildDefaultPath(project);
@@ -403,15 +456,32 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     options.name = parsedPath.name;
     options.path = parsedPath.path;
 
+    // Search server
+    let haveServer = false;	
+    const bufferServerTs = host.read(`/server.ts`);
+    const bufferServerJs = host.read(`/server.js`);
+    if (bufferServerTs !== null) {
+        haveServer = true;
+        options.serverPath = '/server.ts';
+    }
+    if (bufferServerJs !== null) {
+        haveServer = true;
+        options.serverPath = '/server.js';
+    }
+
     return chain([
       branchAndMerge(chain([
+        (!haveServer) ? createExpressServer(options) : noop(),
         applyWebPushOnServer(options),
         applyPackageJsonScripts(options),
         addPackageJsonDependencies(options),
         applyWebPushOnFront(options),
         addDeclarationToNgModule(options),
+        addToEnvironments(options),
         installPackageJsonDependencies()
       ])),
     ])(host, context);
   };
 }
+
+

@@ -161,7 +161,7 @@ export function fileExist(host: Tree, path: string): boolean {
 export function hasUniversalBuild(tree: Tree, options: any): boolean {
 		let hasUniversalBuild = false;
 		const workspace = getWorkspace(tree);
-		const architect = workspace.projects[options.clientProject].architect;
+		const architect = workspace.projects[options.project].architect;
 		if (architect) {
 			for (let builder in architect) {
 				if (architect[builder].builder === '@angular-devkit/build-angular:server') {
@@ -187,7 +187,7 @@ export function addDependencyToPackageJson(tree: Tree, dependency: NodeDependenc
 
 export function getSourceRoot(tree: Tree, options: any): string {
 	const workspace = getWorkspace(tree);
-	return `/${workspace.projects[options.clientProject].sourceRoot}`;
+	return `/${workspace.projects[options.project].sourceRoot}`;
 }
 
 export function readIntoSourceFile(host: Tree, modulePath: string) {
@@ -196,4 +196,21 @@ export function readIntoSourceFile(host: Tree, modulePath: string) {
     throw new SchematicsException(`File ${modulePath} does not exist.`);
   }
   return ts.createSourceFile(modulePath, text.toString('utf-8'), ts.ScriptTarget.Latest, true);
+}
+
+/**
+ * Appends a key: value on a specific environment file 
+ * @param host Tree
+ * @param env The environment to be added (example: prod, staging...)
+ * @param appPath application path (/src...)
+ * @param key The key to be added
+ * @param value The value to be added
+ * @return void
+*/
+export function addEnvironmentVar(host: Tree, env: string, appPath: string, key: string, value: string): void {
+  const environmentFilePath = `${appPath}/environments/environment${(env) ? '.' + env : ''}.ts`;
+  const sourceFile = getFileContent(host, environmentFilePath);
+  const keyValue = `
+  ${key}: '${value}',`;
+  host.overwrite(environmentFilePath, sourceFile.replace('export const environment = {', `export const environment = {${keyValue}` ));
 }
