@@ -44,7 +44,7 @@ function createPushService(tree: Tree, options: PWAOptions) {
 
   const pushServiceContent = 
   `
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { map, catchError, tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
@@ -99,9 +99,9 @@ function createAppComponent(tree: Tree, options: PWAOptions) {
   const appComponentContent = 
   `
 import { Component } from '@angular/core';
-import { SwUpdate } from "@angular/service-worker";
-import { PushService } from "./shared/services/push.service";
-import { SwPush } from "@angular/service-worker";
+import { SwUpdate } from '@angular/service-worker';
+import { PushService } from './shared/services/push.service';
+import { SwPush } from '@angular/service-worker';
 import { environment } from './../environments/environment';
 
 
@@ -472,7 +472,7 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
     return chain([
       branchAndMerge(chain([
         // (!haveServer) ? createExpressServer(options) : noop(),
-        (!haveServer) ? applyWebPushOnServer(options) : noop(),
+        (haveServer) ? applyWebPushOnServer(options) : noop(),
         applyPackageJsonScripts(options),
         addPackageJsonDependencies(options),
         applyWebPushOnFront(options),
