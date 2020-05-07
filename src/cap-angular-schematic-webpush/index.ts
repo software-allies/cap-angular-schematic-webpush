@@ -238,7 +238,7 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
   }
 }
 
-/* function createExpressServer(options: PWAOptions): Rule {
+ function createExpressServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
         const expressServer = `
@@ -265,7 +265,7 @@ app.listen(PORT, () => {
 
         createOrOverwriteFile(tree, 'server.js', expressServer);
     }
-} */
+} 
 
 function applyWebPushOnServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
@@ -471,7 +471,7 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
 
     return chain([
       branchAndMerge(chain([
-        // (!haveServer) ? createExpressServer(options) : noop(),
+        (!haveServer) ? createExpressServer(options) : noop(),
         (haveServer) ? applyWebPushOnServer(options) : noop(),
         applyPackageJsonScripts(options),
         addPackageJsonDependencies(options),
