@@ -3,6 +3,7 @@ export interface Schema {
     vapidPublicKey: string;
     vapidPrivateKey: string;
     haveBodyParser?: boolean;
+    haveCors?: boolean;
     serverPath?: string;
     project?: string;
     module?: any;

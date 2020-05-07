@@ -48,6 +48,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { map, catchError, tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
+import { environment } from './../../../environments/environment';
 
 
 @Injectable({
@@ -64,11 +65,11 @@ export class PushService {
             })
         };
 
-        this.actionUrl = '${options.domain}';
+        this.actionUrl = environment.apiUrl;
     }
 
     addPushSubscriber(sub: any): Observable<any> {
-        return this.http.post<HttpResponse<any>>(this.actionUrl + '/api/add-push-subscriber', JSON.stringify(sub), this.httpOptions)
+        return this.http.post<HttpResponse<any>>(this.actionUrl + 'add-push-subscriber', JSON.stringify(sub), this.httpOptions)
         .pipe(
             map(response => response),
             tap((response: HttpResponse<any>) => {
@@ -79,7 +80,7 @@ export class PushService {
     }
 
     send() {
-        return this.http.post(this.actionUrl + '/api/send-push-notifications', null, this.httpOptions);
+        return this.http.post(this.actionUrl + 'send-push-notifications', null, this.httpOptions);
     }
 
     private handleError(error: any) {
@@ -226,9 +227,9 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
     // On AppComponent html
     const addToAppComponentHtml = 
 `
-<div>
-    <button class="button button-primary" (click)="subscribeToNotifications()" [disabled]="sub">Subscribe</button>
-    <button class="button button-danger" (click)="sendNewsletter()">Send</button>
+<div class="container text-center p-5">
+    <button class="btn btn-primary" (click)="subscribeToNotifications()" [disabled]="sub">Subscribe</button>
+    <button class="btn btn-danger" (click)="sendNewsletter()">Send</button>
 </div>
 `;
 
@@ -270,6 +271,7 @@ app.listen(PORT, () => {
 function applyWebPushOnServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
+        // BodyParser
         const bodyParser = `
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
@@ -281,37 +283,30 @@ app.use(bodyParser.json());
         // Search if is using body-parser
         options.haveBodyParser = (appComponent.indexOf(`bodyParser.json()`) > -1) ? true : false;
 
+        // Cors
+        const cors = `
+const cors = require('cors');
+var corsOptions = {
+    origin: ["${options.domain.split(':')[1]}"]
+};
+app.use(cors(corsOptions));
+`;
+
+        // Search if is using cors
+        options.haveCors = (appComponent.indexOf(`.use(cors(`) > -1) ? true : false;
+
         // Add to configuration and api routes on server.js
         const addToServer = 
       `
 
-/*
-## How To show the Allow Notifications Dialog
-If by accident we click "Deny" in the Allow Notifications dialog after hitting subscribe,
-In order to trigger again the Allow Notifications popup, we need first to clear localhost from this list - [chrome://settings/content/notifications](chrome://settings/content/notifications)
+// Cors
+${(options.haveCors) ? '' : cors}
 
-## Generating VAPID keys
-In order to generate a public/private VAPID key pair, we first need to install the [web-push](https://github.com/web-push-libs/web-push) library globally:
-
-    npm install web-push -g
-
-We can then generate a VAPID key pair with this command:
-
-    web-push generate-vapid-keys --json
-
-And here is a sample output of this command:
-
-json
-{
-    "publicKey": "BF1BhDhSW89yKw6pWbLlzcDpCR3I3ViSCEiS_z0q_RP9-ablo5Up8HDIEP1-GauARtU7MxB6Yl_7FI8UvczPmaQ",
-    "privateKey": "6XaIXj1cbSoaCpxSbOA-xYWHSISVSMCPUcSvEcczxkg"
-}
-
-*/
-
-// Web-Push Block
-const webpush = require('web-push');
+// BodyParser
 ${(options.haveBodyParser) ? '' : bodyParser}
+
+// Web-Push
+const webpush = require('web-push');
 
 const vapidKeys = {
     "publicKey": process.env['publicKey'] || "${options.vapidPublicKey}",
@@ -381,6 +376,30 @@ app.use((req, res, next) => {
     return next();
 });
 
+/*
+## How To show the Allow Notifications Dialog
+If by accident we click "Deny" in the Allow Notifications dialog after hitting subscribe,
+In order to trigger again the Allow Notifications popup, we need first to clear localhost from this list - [chrome://settings/content/notifications](chrome://settings/content/notifications)
+
+## Generating VAPID keys
+In order to generate a public/private VAPID key pair, we first need to install the [web-push](https://github.com/web-push-libs/web-push) library globally:
+
+    npm install web-push -g
+
+We can then generate a VAPID key pair with this command:
+
+    web-push generate-vapid-keys --json
+
+And here is a sample output of this command:
+
+json
+{
+    "publicKey": "BF1BhDhSW89yKw6pWbLlzcDpCR3I3ViSCEiS_z0q_RP9-ablo5Up8HDIEP1-GauARtU7MxB6Yl_7FI8UvczPmaQ",
+    "privateKey": "6XaIXj1cbSoaCpxSbOA-xYWHSISVSMCPUcSvEcczxkg"
+}
+
+*/
+
 `;
 
         createOrOverwriteFile(tree, filePath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
@@ -403,6 +422,15 @@ function addPackageJsonDependencies(options: PWAOptions): Rule {
             type: NodeDependencyType.Dev,
             name: 'body-parser',
             version: '^1.19.0'
+        });
+    }
+
+    if (!options.haveCors) {
+        // add cors dependency to package.json
+        addDependencyToPackageJson(host, {
+            type: NodeDependencyType.Dev,
+            name: 'cors',
+            version: '^2.8.5'
         });
     }
 

@@ -1,13 +1,17 @@
 {
   "name": "cap-angular-schematic-webpush",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "description": "CAP Schematics PWA WebPush",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && jasmine src/**/*_spec.js"
   },
   "keywords": [
-    "schematics"
+    "schematics",
+    "PWA",
+    "Web Push",
+    "PWA Notifications",
+    "Push Notifications"
   ],
   "author": {
     "name": "Software Allies",

@@ -19,7 +19,6 @@ To run the schematic, execute the following command.
 ng add cap-angular-schematic-webpush 
 ```
 
-
 The schematic will be configurated after you answer the following questions.
 
 * What is the API Url for Web Push End Points? : < http://domain:port >
@@ -63,11 +62,18 @@ We can then generate a VAPID key pair with this command:
 
 And here is a sample output of this command:
 
+```
 json
 {
     "publicKey": "BF1BhDhSW89yKw6pWbLlzcDpCR3I3ViSCEiS_z0q_RP9-ablo5Up8HDIEP1-GauARtU7MxB6Yl_7FI8UvczPmaQ",
     "privateKey": "6XaIXj1cbSoaCpxSbOA-xYWHSISVSMCPUcSvEcczxkg"
 }
+
+```
+
+## On Heroku
+Once in the Heroku app the web-push package is installed, we must open the Heroku console and execute the next command:
+web-push generate-vapid-keys --json
 
 
 ## Usage
@@ -77,7 +83,7 @@ angular 8
 [Schematic](https://www.schematics.com/)
 
 ## Version 
-1.0
+1.0.30
 
 ## Authors
 Software Allies - [Software Allies](https://github.com/software-allies)

@@ -6,7 +6,7 @@
   "properties": {
     "domain": {
       "type": "string",
-      "description": "Domain and Port",
+      "description": "Domain:Port",
       "x-prompt": "What is the API Url for Web Push End Points?",
       "default": "http://localhost:4000",
       "$default": {
