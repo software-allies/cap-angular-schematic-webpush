@@ -73,7 +73,12 @@ json
 
 ## On Heroku
 Once in the Heroku app the web-push package is installed, we must open the Heroku console and execute the next command:
-web-push generate-vapid-keys --json
+"web-push generate-vapid-keys --json"
+
+After that:
+* On Heroku config app create Settings -> Config Vars "publicKey" and "privateKey".
+* Replace the publickKey in te environments files of the Angular app and deploy again.
+
 
 
 ## Usage
