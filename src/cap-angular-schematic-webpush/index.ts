@@ -48,7 +48,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { map, catchError, tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
-import { environment } from './../../../environments/environment';
+import { environment } from './../../../../environments/environment';
 
 
 @Injectable({
@@ -65,7 +65,7 @@ export class PushService {
             })
         };
 
-        this.actionUrl = environment.apiUrl;
+        this.actionUrl = environment.webpushApiUrl;
     }
 
     addPushSubscriber(sub: any): Observable<any> {
@@ -91,7 +91,7 @@ export class PushService {
 
 `;
 
-    const appServicePath = getSourceRoot(tree, options) + '/app/shared/services/push.service.ts';
+    const appServicePath = getSourceRoot(tree, options) + '/app/modules/cap-webpush/services/push.service.ts';
     createOrOverwriteFile(tree, appServicePath, pushServiceContent);
 }
 
@@ -101,7 +101,7 @@ function createAppComponent(tree: Tree, options: PWAOptions) {
   `
 import { Component } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
-import { PushService } from './shared/services/push.service';
+import { PushService } from './modules/cap-webpush/services/push.service';
 import { SwPush } from '@angular/service-worker';
 import { environment } from './../environments/environment';
 
@@ -165,7 +165,9 @@ export class AppComponent {
 function addToEnvironments(options: PWAOptions): Rule {
     return (host: Tree) => {
         addEnvironmentVar(host, '', options.path || '/src', 'vapidKeysPublicKey', options.vapidPublicKey);
+        addEnvironmentVar(host, '', options.path || '/src', 'webpushApiUrl', options.domain);
         addEnvironmentVar(host, 'prod', options.path || '/src', 'vapidKeysPublicKey', options.vapidPublicKey);
+        addEnvironmentVar(host, 'prod', options.path || '/src', 'webpushApiUrl', options.domain);
     }
 }
 
@@ -244,6 +246,7 @@ function applyWebPushOnServer(options: PWAOptions): Rule {
 
         // BodyParser
         const bodyParser = `
+// BodyParser
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 `;
@@ -256,6 +259,7 @@ app.use(bodyParser.json());
 
         // Cors
         const cors = `
+// Cors
 const cors = require('cors');
 var corsOptions = {
     origin: ["${options.domain}"]
@@ -269,15 +273,34 @@ app.use(cors(corsOptions));
         // Add to configuration and api routes on server.js
         const addToServer = 
       `
-
-// Cors
 ${(options.haveCors) ? '' : cors}
-
-// BodyParser
 ${(options.haveBodyParser) ? '' : bodyParser}
-
 // Web-Push
 const webpush = require('web-push');
+
+/*
+## How To show the Allow Notifications Dialog
+If by accident we click "Deny" in the Allow Notifications dialog after hitting subscribe,
+In order to trigger again the Allow Notifications popup, we need first to clear localhost from this list - [chrome://settings/content/notifications](chrome://settings/content/notifications)
+
+## Generating VAPID keys
+In order to generate a public/private VAPID key pair, we first need to install the [web-push](https://github.com/web-push-libs/web-push) library globally:
+
+    npm install web-push -g
+
+We can then generate a VAPID key pair with this command:
+
+    web-push generate-vapid-keys --json
+
+And here is a sample output of this command:
+
+json
+{
+    "publicKey": "BF1BhDhSW89yKw6pWbLlzcDpCR3I3ViSCEiS_z0q_RP9-ablo5Up8HDIEP1-GauARtU7MxB6Yl_7FI8UvczPmaQ",
+    "privateKey": "6XaIXj1cbSoaCpxSbOA-xYWHSISVSMCPUcSvEcczxkg"
+}
+
+*/
 
 const vapidKeys = {
     "publicKey": process.env['publicKey'] || "${options.vapidPublicKey}",
@@ -347,6 +370,37 @@ app.use((req, res, next) => {
     return next();
 });
 
+`;
+
+        createOrOverwriteFile(tree, filePath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
+    }
+}
+
+function createExpressServer(options: PWAOptions): Rule {
+    return (tree: Tree) => {
+
+        const expressServer = `
+const express = require('express');
+const join = require('path').join;
+const PORT = process.env.PORT || 4000;
+
+// Express server
+const app = express();
+
+// Cors
+const cors = require('cors');
+var corsOptions = {
+    origin: ["${options.domain}"]
+};
+app.use(cors(corsOptions));
+
+// BodyParser
+const bodyParser = require('body-parser');
+app.use(bodyParser.json());
+
+// Web-Push
+const webpush = require('web-push');
+
 /*
 ## How To show the Allow Notifications Dialog
 If by accident we click "Deny" in the Allow Notifications dialog after hitting subscribe,
@@ -371,22 +425,73 @@ json
 
 */
 
-`;
+const vapidKeys = {
+    "publicKey": process.env['publicKey'] || "${options.vapidPublicKey}",
+    "privateKey": process.env['privateKey'] || "${options.vapidPrivateKey}"
+};
 
-        createOrOverwriteFile(tree, filePath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
-    }
+webpush.setVapidDetails(
+    'mailto:example@yourdomain.org',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);
+
+let USER_SUBSCRIPTIONS = [];
+
+function addPushSubscriber(req, res) {
+    const sub = req.body;
+    console.log('Received Subscription on the server: ', sub);
+    USER_SUBSCRIPTIONS.push(sub);
+    res.status(200)
+        .json({ message: "Subscription added successfully." });
 }
 
-function createExpressServer(options: PWAOptions): Rule {
-    return (tree: Tree) => {
+function sendPushNotifications(req, res) {
 
-        const expressServer = `
-const express = require('express');
-const join = require('path').join;
-const PORT = process.env.PORT || 4000};
+    console.log('Total subscriptions', USER_SUBSCRIPTIONS.length);
 
-// Express server
-const app = express();
+    // sample notification payload
+    const notificationPayload = {
+        "notification": {
+            "title": "Angular News",
+            "body": "Newsletter Available!",
+            "icon": "assets/icons/icon-96x96.png",
+            "vibrate": [100, 50, 100],
+            "data": {
+                "dateOfArrival": Date.now(),
+                "primaryKey": 1
+            },
+            "actions": [{
+                "action": "explore",
+                "title": "Go to the site"
+            }]
+        }
+    };
+
+    Promise.all(USER_SUBSCRIPTIONS.map(sub => webpush.sendNotification(
+        sub, JSON.stringify(notificationPayload) )))
+        .then(() => res.status(200).json({message: 'Newsletter sent successfully.'}))
+        .catch(err => {
+            console.error("Error sending notification, reason: ", err);
+            res.sendStatus(500);
+        });
+}
+
+// Web-Push REST API
+app.route('/api/add-push-subscriber')
+    .post(addPushSubscriber);
+
+app.route('/api/send-push-notifications')
+    .post(sendPushNotifications);
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept'
+    );
+    return next();
+});
 
 // Serve static files....
 app.use(express.static(__dirname + '/dist/${options.project}'));
@@ -400,6 +505,7 @@ app.get('/*', function(req, res) {
 app.listen(PORT, () => {
     console.log('Node server listening on port: ' + PORT);
 });
+        
         `;
 
         createOrOverwriteFile(tree, 'server.js', expressServer);
