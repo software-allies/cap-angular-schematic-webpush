@@ -447,7 +447,7 @@ function installPackageJsonDependencies(): Rule {
   };
 }
 
-function applyPackageJsonScripts(options: PWAOptions) {
+function applyPackageJsonScripts() {
 	return (tree: Tree) => {
 		const pkgPath = `/package.json`;
 		const buffer = tree.read(pkgPath);
@@ -503,7 +503,7 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
       branchAndMerge(chain([
         (!haveServer) ? createExpressServer(options) : noop(),
         (haveServer) ? applyWebPushOnServer(options) : noop(),
-        applyPackageJsonScripts(options),
+        applyPackageJsonScripts(),
         addPackageJsonDependencies(options),
         applyWebPushOnFront(options),
         addDeclarationToNgModule(options),
