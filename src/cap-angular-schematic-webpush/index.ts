@@ -1,9 +1,9 @@
-import { InsertChange } from '@schematics/angular/utility/change';
+// import { InsertChange } from '@schematics/angular/utility/change';
 import { parseName } from '@schematics/angular/utility/parse-name';
 import { buildDefaultPath } from '@schematics/angular/utility/project';
 import { getFileContent } from '@schematics/angular/utility/test';
 import { NodeDependencyType } from '@schematics/angular/utility/dependencies';
-import { strings } from '@angular-devkit/core';
+// import { strings } from '@angular-devkit/core';
 import { 
   chain,
   branchAndMerge,
@@ -16,7 +16,7 @@ import {
  import { FileSystemSchematicContext } from '@angular-devkit/schematics/tools';
  import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
  import {
-  buildRelativePath, 
+  // buildRelativePath, 
   findModule, 
   MODULE_EXT, 
   ROUTING_MODULE_EXT
@@ -28,12 +28,12 @@ import {
   getSourceRoot,
   appendHtmlElementToTag,
   createOrOverwriteFile,
-  readIntoSourceFile,
+  // readIntoSourceFile,
   addEnvironmentVar
 } from './cap-utils';
 import {
-  addProviderToModule,
-  addImportToModule
+  // addProviderToModule,
+  // addImportToModule
  } from './vendored-ast-utils';
 import { Schema as PWAOptions } from './schema';
 import { getAppName } from './cap-utils/package';
@@ -171,6 +171,7 @@ function addToEnvironments(options: PWAOptions): Rule {
     }
 }
 
+/*
 function addDeclarationToNgModule(options: PWAOptions): Rule {
   return (host: Tree) => {
     const modulePath = options.module;
@@ -217,7 +218,7 @@ function addDeclarationToNgModule(options: PWAOptions): Rule {
 
     return host;
   };
-}
+}*/
 
 function applyWebPushOnFront(options: PWAOptions): Rule {
   return (tree: Tree) => {
@@ -612,7 +613,7 @@ export function schematicsPWAWebPush(options: PWAOptions): Rule {
         applyPackageJsonScripts(),
         addPackageJsonDependencies(options),
         applyWebPushOnFront(options),
-        addDeclarationToNgModule(options),
+        // addDeclarationToNgModule(options),
         addToEnvironments(options),
         installPackageJsonDependencies()
       ])),
