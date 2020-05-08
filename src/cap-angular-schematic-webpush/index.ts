@@ -245,7 +245,7 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
         const expressServer = `
 const express = require('express');
 const join = require('path').join;
-const PORT = process.env.PORT || ${(options.domain.split(':')[2]) ? options.domain.split(':')[2] : 4000};
+const PORT = process.env.PORT || 4000};
 
 // Express server
 const app = express();
@@ -288,7 +288,7 @@ app.use(bodyParser.json());
         const cors = `
 const cors = require('cors');
 var corsOptions = {
-    origin: ["${options.domain.split(':')[1]}"]
+    origin: ["${options.domain}"]
 };
 app.use(cors(corsOptions));
 `;
