@@ -265,6 +265,7 @@ app.listen(PORT, () => {
         `;
 
         createOrOverwriteFile(tree, 'server.js', expressServer);
+        applyWebPushOnServer(options);
     }
 } 
 
@@ -454,7 +455,8 @@ function applyPackageJsonScripts(options: PWAOptions) {
 			throw new SchematicsException('Could not find package.json');
 		}
 		const pkg = JSON.parse(buffer.toString());
-        pkg.scripts['app-shell'] = `ng run ${options.project}:app-shell:production`;
+        pkg.scripts['start'] = `node server`;
+        pkg.scripts['heroku-postbuild'] = `ng build --configuration=production`;
 		tree.overwrite(pkgPath, JSON.stringify(pkg, null, 2));
 		return tree;
 	}
