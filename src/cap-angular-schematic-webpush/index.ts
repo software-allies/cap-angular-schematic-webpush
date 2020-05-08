@@ -239,36 +239,6 @@ function applyWebPushOnFront(options: PWAOptions): Rule {
   }
 }
 
- function createExpressServer(options: PWAOptions): Rule {
-    return (tree: Tree) => {
-
-        const expressServer = `
-const express = require('express');
-const join = require('path').join;
-const PORT = process.env.PORT || 4000};
-
-// Express server
-const app = express();
-
-// Serve static files....
-app.use(express.static(__dirname + '/dist/${options.project}'));
-
-// Send all requests to index.html
-app.get('/*', function(req, res) {
-  res.sendFile(path.join(__dirname + '/dist/${options.project}/index.html'));
-});
-
-// Start up the Node server
-app.listen(PORT, () => {
-    console.log('Node server listening on port: ' + PORT);
-});
-        `;
-
-        createOrOverwriteFile(tree, 'server.js', expressServer);
-        applyWebPushOnServer(options);
-    }
-} 
-
 function applyWebPushOnServer(options: PWAOptions): Rule {
     return (tree: Tree) => {
 
@@ -406,6 +376,36 @@ json
         createOrOverwriteFile(tree, filePath, appComponent.replace(`app = express();`, `app = express();` + addToServer));
     }
 }
+
+function createExpressServer(options: PWAOptions): Rule {
+    return (tree: Tree) => {
+
+        const expressServer = `
+const express = require('express');
+const join = require('path').join;
+const PORT = process.env.PORT || 4000};
+
+// Express server
+const app = express();
+
+// Serve static files....
+app.use(express.static(__dirname + '/dist/${options.project}'));
+
+// Send all requests to index.html
+app.get('/*', function(req, res) {
+  res.sendFile(path.join(__dirname + '/dist/${options.project}/index.html'));
+});
+
+// Start up the Node server
+app.listen(PORT, () => {
+    console.log('Node server listening on port: ' + PORT);
+});
+        `;
+
+        createOrOverwriteFile(tree, 'server.js', expressServer);
+        applyWebPushOnServer(options);
+    }
+} 
 
 function addPackageJsonDependencies(options: PWAOptions): Rule {
   return (host: Tree) => {
